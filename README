@@ -1,0 +1,10 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=1033
+
+Usage：
+   In normal mode，press <Leader>c to comment/uncomment current line.
+   If current line is blank line and no non-blank line before it, insert file header comment. The file header comment use template files. These templates should be placed to  ~/.vim/plugin/templates/ directory. template file name is same as cvim plugin.
+   If current line is function declaration line, and if g:DoxygenFuncDesc is set to 1, insert Doxygen style function comment. Else use function comment template file.
+   In visual mode, press <Leader>c to comment/uncomment blocks. This only applies to c source or header files.
+
+Mainly targeted:  c,h,cpp file modification
+Also applicable：   java,sh,vim,awk,sed,perl,python file modification
