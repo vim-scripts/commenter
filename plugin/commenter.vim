@@ -1,6 +1,6 @@
 " -----------------------------------------------------------------
 " File       :  commenter.vim
-" Maintainer :  Sparks Lu (imagic@smth.org)
+" Maintainer :  Sparks Lu (cnlgm@hotmail.com)
 " Last Change:  July 15 2004
 " Version    :  0.6
 " Usage      :  Ctrl-c to comment/uncomment line or block
@@ -8,9 +8,12 @@
 "               If cursor on function declaration of c files, Ctrl-c to insert function description
 " History    :  
 "               0.6       Added c function description and file header insertion
-"            :  0.6.1     Added perl support
-"                         For bash, awk, sed, perl, if file header not exist, insert default
+"               0.6.1     Added perl support
 "                         filereadable() ok. $HOME
+"                         For bash, awk, sed, perl, if file header not exist, insert default
+"               0.7       Use <Leader>c to comment/uncomment instead of Ctrl-c.
+"               0.8       Allow any count of whitespace after comment symbol while uncommont line
+"			  Insert commont symbol immediately before first non-whitespace character instead of beginning of line
 " Todo       :  Uncomment file header and function description
 " -----------------------------------------------------------------
 
@@ -23,11 +26,14 @@ let loaded_commenter=1
 if !exists("g:CFileHeaderFn")
 	let g:CFileHeaderFn=$HOME."/.vim/plugin/templates/c-file-header"
 endif
+if !exists("g:CppFileHeaderFn")
+	let g:CppFileHeaderFn=$HOME."/.vim/plugin/templates/cpp-file-header"
+endif
 if !exists("g:HFileHeaderFn")
 	let g:HFileHeaderFn=$HOME."/.vim/plugin/templates/h-file-header"
 endif
 if !exists("g:JavaFileHeaderFn")
-	let g:JavaFileHeaderFn=$HOME."/.vim/plugin/templates/c-file-header"
+	let g:JavaFileHeaderFn=$HOME."/.vim/plugin/templates/java-file-header"
 endif
 if !exists("g:ShFileHeaderFn")
 	let g:ShFileHeaderFn=$HOME."/.vim/plugin/templates/bash-file-header"
@@ -51,6 +57,12 @@ endif
 if !exists("g:CFuncDesc")
 	let g:CFuncDesc="~/.vim/plugin/templates/c-function-description"
 endif
+if !exists("g:CPPFuncDesc")
+	let g:CPPFuncDesc="~/.vim/plugin/templates/cpp-function-description"
+endif
+if !exists("g:JavaFuncDesc")
+	let g:JavaFuncDesc="~/.vim/plugin/templates/java-function-description"
+endif
 
 if !exists("g:DoxygenFuncDesc")
 	let g:DoxygenFuncDesc=1
@@ -61,6 +73,8 @@ function! s:InsertFileHeader()
 		let l:FileHeaderFn=g:CFileHeaderFn
 	elseif &ft == 'h'
 		let l:FileHeaderFn=g:HFileHeaderFn
+	elseif &ft == 'cpp'
+		let l:FileHeaderFn=g:CppFileHeaderFn
 	elseif &ft == 'java'
 		let l:FileHeaderFn=g:JavaFileHeaderFn
 	elseif &ft == 'sh'
@@ -99,37 +113,46 @@ function! s:CommentUncommentLine()
 		return
 	endif
 
-	" Cursor on a function defination line, add function comment by calling :Dox
-	if &ft == 'c' &&  getline(".") =~ ')$' && getline(line(".")+1) =~ '^{'
+	" Cursor on a function defination line, add function description
+	if &ft == 'c'
+		let l:FuncDesc=g:CFuncDesc
+	elseif &ft == 'cpp'
+		let l:FuncDesc=g:CPPFuncDesc
+	elseif &ft == 'java'
+		let l:FuncDesc=g:JavaFuncDesc
+	endif
+	if ( &ft == 'c' || &ft == 'cpp' || &ft == 'java' ) &&  getline(".") =~ ')$' && getline(line(".")+1) =~ '^{'
 		if( g:DoxygenFuncDesc )
 			echo "Comment function"
+			" Add Doxgen function comment
 			exec "Dox"
 		else
- 		 	if filereadable(g:CFuncDesc)
+ 		 	if filereadable(l:FuncDesc)
 				silent exec "normal k"
-				silent exec "read" . g:CFuncDesc
+				silent exec "read" . l:FuncDesc
  			endif
 		endif
 		return
 	endif
 
-	if &ft == 'c' || &ft == 'h' || &ft == 'java' 
+	if &ft == 'c' || &ft == 'h' || &ft == 'cpp' || &ft == 'java' 
 		let l:commentSymbol='\/\/'
 	elseif &ft == 'sh' || &ft == 'awk' || &ft == 'sed' || &ft == 'perl' || &ft == 'python'
-		let l:commentSymbol='\# '
+		let l:commentSymbol='\#'
 	elseif &ft == 'vim'
-		let l:commentSymbol='\" '
+		let l:commentSymbol='\"'
 	endif
 
-	if(getline(".") =~ '^' . commentSymbol)
-		silent exec 's/' . l:commentSymbol . '//'
+	" Insert comment symbol immediately before first non-whitespace character
+	if(getline(".") =~ '^\s*' . commentSymbol)
+		silent exec 's/' . l:commentSymbol . '\s*//'
 	else
-		silent exec 's/^/' . l:commentSymbol . '/'
+		silent exec 's/^\s*/&' . l:commentSymbol . ' /'
 	endif
 endfunction
 
 function! s:CommentUncommentRange() range
-	if &ft == 'c' || &ft == 'h'
+	if &ft == 'c' || &ft == 'h' || &ft == 'cpp' 
 		let l:strFirstLine=getline(a:firstline)
 		if(l:strFirstLine =~ '^#if')
 			exec a:firstline
@@ -158,8 +181,8 @@ function! s:CommentUncommentRange() range
 	endif
 endfunction
 
-autocmd FileType c,h,sh,awk,vim,sed,perl,python nnoremap <Leader>c :call <SID>CommentUncommentLine()<CR>
-autocmd FileType c,h,sh,awk,vim,sed,perl,python vnoremap <Leader>c :call <SID>CommentUncommentRange()<CR>
+autocmd FileType c,h,cpp,sh,awk,vim,sed,perl,python nnoremap <silent> <Leader>c :call <SID>CommentUncommentLine()<CR>
+autocmd FileType c,h,cpp,sh,awk,vim,sed,perl,python vnoremap <silent> <Leader>c :call <SID>CommentUncommentRange()<CR>
 
 " -----------------------------------------------------------------
 " Following is copied from MakeDoxygenComment.vim
