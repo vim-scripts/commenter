@@ -44,6 +44,9 @@ endif
 if !exists("g:PerlFileHeaderFn")
 	let g:PerlFileHeaderFn=$HOME."/.vim/plugin/templates/perl-file-header"
 endif
+if !exists("g:PythonFileHeaderFn")
+	let g:PythonFileHeaderFn=$HOME."/.vim/plugin/templates/python-file-header"
+endif
 
 if !exists("g:CFuncDesc")
 	let g:CFuncDesc="~/.vim/plugin/templates/c-function-description"
@@ -70,15 +73,18 @@ function! s:InsertFileHeader()
 		let l:FileHeaderFn=g:SedFileHeaderFn
 	elseif &ft == 'perl'
 		let l:FileHeaderFn=g:PerlFileHeaderFn
+	elseif &ft == 'python'
+		let l:FileHeaderFn=g:PythonFileHeaderFn
 	endif
 
  	if filereadable(l:FileHeaderFn)
 		silent exec "0read" . l:FileHeaderFn
-	elseif &ft == 'sh' || &ft == 'awk' || &ft == 'sed'
+	elseif &ft == 'sh'
 		call append(0,"#!/bin/".&ft)
-	elseif &ft == 'perl'
-		echo 'ok!'
-		call append(0,"#!/usr/bin/perl")
+	elseif &ft == 'awk' || &ft == 'sed'
+		call append(0,"#!/bin/".&ft." -f")
+	elseif &ft == 'perl' || &ft == 'python'
+		call append(0,"#!/usr/bin/".&ft)
 	else
 		echo 'No header template available!'
  	endif
@@ -109,7 +115,7 @@ function! s:CommentUncommentLine()
 
 	if &ft == 'c' || &ft == 'h' || &ft == 'java' 
 		let l:commentSymbol='\/\/'
-	elseif &ft == 'sh' || &ft == 'awk' || &ft == 'sed' || &ft == 'perl'
+	elseif &ft == 'sh' || &ft == 'awk' || &ft == 'sed' || &ft == 'perl' || &ft == 'python'
 		let l:commentSymbol='\# '
 	elseif &ft == 'vim'
 		let l:commentSymbol='\" '
@@ -152,8 +158,8 @@ function! s:CommentUncommentRange() range
 	endif
 endfunction
 
-autocmd FileType c,h,sh,awk,vim,sed,perl nnoremap <C-C> :call <SID>CommentUncommentLine()<CR>
-autocmd FileType c,h,sh,awk,vim,sed,perl vnoremap <C-C> :call <SID>CommentUncommentRange()<CR>
+autocmd FileType c,h,sh,awk,vim,sed,perl,python nnoremap <Leader>c :call <SID>CommentUncommentLine()<CR>
+autocmd FileType c,h,sh,awk,vim,sed,perl,python vnoremap <Leader>c :call <SID>CommentUncommentRange()<CR>
 
 " -----------------------------------------------------------------
 " Following is copied from MakeDoxygenComment.vim
