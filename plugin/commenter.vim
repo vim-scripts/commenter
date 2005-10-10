@@ -3,17 +3,20 @@
 " Maintainer :  Sparks Lu (cnlgm@hotmail.com)
 " Last Change:  July 15 2004
 " Version    :  0.6
-" Usage      :  Ctrl-c to comment/uncomment line or block
-"               If cursor on blank line and no prev non-blank line, Ctrl-c to insert file header
-"               If cursor on function declaration of c files, Ctrl-c to insert function description
+" Usage      :  <Leader>c to comment/uncomment line or block
+"               If cursor on blank line and no prev non-blank line, <Leader>c to insert file header
+"               If cursor on function declaration of c files, <Leader>c to insert function description
 " History    :  
 "               0.6       Added c function description and file header insertion
 "               0.6.1     Added perl support
 "                         filereadable() ok. $HOME
 "                         For bash, awk, sed, perl, if file header not exist, insert default
-"               0.7       Use <Leader>c to comment/uncomment instead of Ctrl-c.
+"               0.7       Use <Leader>c to comment/uncomment instead of <Leader>c.
 "               0.8       Allow any count of whitespace after comment symbol while uncommont line
 "			  Insert commont symbol immediately before first non-whitespace character instead of beginning of line
+"               0.81      No h filetype
+"                         Use <Leader>ch to add #ifndef/#define/#endif lines for header files
+"                         Insert comment symbol in beginning of line for block comment
 " Todo       :  Uncomment file header and function description
 " -----------------------------------------------------------------
 
@@ -104,7 +107,7 @@ function! s:InsertFileHeader()
  	endif
 endfunction
 
-function! s:CommentUncommentLine()
+function! s:CommentUncommentLine(bRange)
 	if strlen(getline(".")) == 0
 		" Cursor on first non-blank line of file, add file header
 		if prevnonblank(line(".")) == 0
@@ -143,11 +146,16 @@ function! s:CommentUncommentLine()
 		let l:commentSymbol='\"'
 	endif
 
-	" Insert comment symbol immediately before first non-whitespace character
-	if(getline(".") =~ '^\s*' . commentSymbol)
-		silent exec 's/' . l:commentSymbol . '\s*//'
+	" Insert comment symbol in beginning of line for block comment
+	" Insert comment symbol immediately before first non-whitespace character for one line comment
+	if(getline(".") =~ '^\s*' . l:commentSymbol)
+		silent exec 's/' . l:commentSymbol . ' \?//'
 	else
-		silent exec 's/^\s*/&' . l:commentSymbol . ' /'
+	    if(a:bRange == 'y')
+		    silent exec 's/^\s*/' . l:commentSymbol . ' &/'
+	    else
+		    silent exec 's/^\s*/&' . l:commentSymbol . ' /'
+	    endif
 	endif
 endfunction
 
@@ -172,7 +180,7 @@ function! s:CommentUncommentRange() range
 	else
 		exec a:firstline
 		while line(".") <= a:lastline
-			call s:CommentUncommentLine()
+			call s:CommentUncommentLine('y')
 			if line(".") == line("$")
 				break
 			endif
@@ -181,8 +189,14 @@ function! s:CommentUncommentRange() range
 	endif
 endfunction
 
-autocmd FileType c,h,cpp,sh,awk,vim,sed,perl,python nnoremap <silent> <Leader>c :call <SID>CommentUncommentLine()<CR>
-autocmd FileType c,h,cpp,sh,awk,vim,sed,perl,python vnoremap <silent> <Leader>c :call <SID>CommentUncommentRange()<CR>
+function! s:addHeaderIfdef()
+    let l:macroName="_" . toupper(substitute(expand("%:p:t"), '\.', '_', ''))
+    exec "normal ggO" . "#ifndef " . l:macroName . "\<CR>#define " . l:macroName . "\n\<ESC>" . "Go" . "\n#endif // " . l:macroName
+endfunction
+
+autocmd FileType c,cpp,java,sh,awk,vim,sed,perl,python nnoremap <silent> <Leader>c :call <SID>CommentUncommentLine('n')<CR>
+autocmd FileType c,cpp,java,sh,awk,vim,sed,perl,python vnoremap <silent> <Leader>c :call <SID>CommentUncommentRange()<CR>
+autocmd BufNewFile,BufRead *.h nnoremap <silent> <Leader>ch :call <SID>addHeaderIfdef()<CR>
 
 " -----------------------------------------------------------------
 " Following is copied from MakeDoxygenComment.vim
